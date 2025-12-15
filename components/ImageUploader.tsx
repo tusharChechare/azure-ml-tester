@@ -90,8 +90,9 @@ export default function ImageUploader({ onImageSelect }: ImageUploaderProps) {
   };
 
   const handlePaste = async (e: React.ClipboardEvent) => {
-    const items = e.clipboardData.items;
-    for (const item of items) {
+    const items = Array.from(e.clipboardData.items);
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
       if (item.type.startsWith('image/')) {
         const file = item.getAsFile();
         if (file) {
