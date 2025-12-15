@@ -199,7 +199,7 @@ export default function ResponseViewer({ response, loading, error }: ResponseVie
             {view === 'json' ? (
               <div className="flex-1 code-block p-4 overflow-auto">
                 <pre className="text-sm text-dark-200 font-mono whitespace-pre-wrap">
-                  {prettyJson(response.data)}
+                  {prettyJson(response.data as string | object)}
                 </pre>
               </div>
             ) : (
