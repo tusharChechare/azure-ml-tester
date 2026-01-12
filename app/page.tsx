@@ -279,7 +279,7 @@ export default function Home() {
       }
       setError(errorMessage);
       setVisionResponse({
-        data: { error: errorMessage },
+        data: null,
         status: 0,
         duration,
       });
