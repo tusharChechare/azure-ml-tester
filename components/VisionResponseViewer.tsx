@@ -25,7 +25,7 @@ interface BoundingBox {
   h: number;
 }
 
-interface VisionResponse {
+export interface VisionResponse {
   captionResult?: {
     text: string;
     confidence: number;

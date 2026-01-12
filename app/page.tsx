@@ -16,7 +16,7 @@ import RequestHistory from '@/components/RequestHistory';
 import VisionConfig, { type VisionConfigType } from '@/components/VisionConfig';
 import VisionFeatureSelector, { type VisionFeatures } from '@/components/VisionFeatureSelector';
 import VisionTemplates from '@/components/VisionTemplates';
-import VisionResponseViewer from '@/components/VisionResponseViewer';
+import VisionResponseViewer, { type VisionResponse } from '@/components/VisionResponseViewer';
 import VisionCodeGenerator from '@/components/VisionCodeGenerator';
 import {
   generateId,
@@ -63,7 +63,7 @@ export default function Home() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageIsUrl, setImageIsUrl] = useState(false); // Track if image is URL or base64
   const [response, setResponse] = useState<{ data: unknown; status: number; duration: number } | null>(null);
-  const [visionResponse, setVisionResponse] = useState<{ data: unknown; status: number; duration: number } | null>(null);
+  const [visionResponse, setVisionResponse] = useState<{ data: VisionResponse | null; status: number; duration: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
