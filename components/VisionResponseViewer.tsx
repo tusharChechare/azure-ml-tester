@@ -14,7 +14,9 @@ import {
   FileText,
   Users,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Crop,
+  MessageCircle
 } from 'lucide-react';
 import { formatDuration, prettyJson } from '@/lib/utils';
 
@@ -92,10 +94,12 @@ export default function VisionResponseViewer({
   const [copied, setCopied] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     caption: true,
+    denseCaptions: true,
     tags: true,
     objects: true,
     text: true,
-    people: false,
+    people: true,
+    smartCrops: true,
   });
 
   const handleCopy = async () => {
@@ -311,6 +315,41 @@ export default function VisionResponseViewer({
                 </div>
               )}
 
+              {/* Dense Captions */}
+              {data.denseCaptionsResult?.values && data.denseCaptionsResult.values.length > 0 && (
+                <div className="bg-dark-800 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => toggleSection('denseCaptions')}
+                    className="w-full p-3 flex items-center justify-between hover:bg-dark-700/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-cyan-400" />
+                      <span className="text-white font-medium">Dense Captions</span>
+                      <span className="px-1.5 py-0.5 bg-dark-700 rounded text-xs text-dark-400">
+                        {data.denseCaptionsResult.values.length}
+                      </span>
+                    </div>
+                    {expandedSections.denseCaptions ? <ChevronUp className="w-4 h-4 text-dark-400" /> : <ChevronDown className="w-4 h-4 text-dark-400" />}
+                  </button>
+                  {expandedSections.denseCaptions && (
+                    <div className="px-3 pb-3 space-y-2">
+                      {data.denseCaptionsResult.values.map((caption, index) => (
+                        <div key={index} className="p-2 bg-dark-700/50 rounded-lg">
+                          <p className="text-cyan-300 italic text-sm">&quot;{caption.text}&quot;</p>
+                          <div className="mt-2 flex items-center justify-between text-xs text-dark-400">
+                            <span>
+                              Region: ({caption.boundingBox.x}, {caption.boundingBox.y}) | 
+                              Size: {caption.boundingBox.w}×{caption.boundingBox.h}
+                            </span>
+                            <span>{(caption.confidence * 100).toFixed(1)}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Tags */}
               {data.tagsResult?.values && data.tagsResult.values.length > 0 && (
                 <div className="bg-dark-800 rounded-lg overflow-hidden">
@@ -403,10 +442,21 @@ export default function VisionResponseViewer({
                     {expandedSections.people ? <ChevronUp className="w-4 h-4 text-dark-400" /> : <ChevronDown className="w-4 h-4 text-dark-400" />}
                   </button>
                   {expandedSections.people && (
-                    <div className="px-3 pb-3">
-                      <p className="text-dark-300 text-sm">
-                        {data.peopleResult.values.length} person(s) detected in the image.
-                      </p>
+                    <div className="px-3 pb-3 space-y-2">
+                      {data.peopleResult.values.map((person, index) => (
+                        <div key={index} className="p-2 bg-dark-700/50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="text-pink-400 font-medium">Person {index + 1}</span>
+                            <span className="text-xs text-dark-400">
+                              {(person.confidence * 100).toFixed(1)}% confidence
+                            </span>
+                          </div>
+                          <p className="text-xs text-dark-500 mt-1">
+                            Position: ({person.boundingBox.x}, {person.boundingBox.y}) | 
+                            Size: {person.boundingBox.w}×{person.boundingBox.h}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -441,8 +491,45 @@ export default function VisionResponseViewer({
                 </div>
               )}
 
+              {/* Smart Crops */}
+              {data.smartCropsResult?.values && data.smartCropsResult.values.length > 0 && (
+                <div className="bg-dark-800 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => toggleSection('smartCrops')}
+                    className="w-full p-3 flex items-center justify-between hover:bg-dark-700/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Crop className="w-4 h-4 text-orange-400" />
+                      <span className="text-white font-medium">Smart Crops</span>
+                      <span className="px-1.5 py-0.5 bg-dark-700 rounded text-xs text-dark-400">
+                        {data.smartCropsResult.values.length}
+                      </span>
+                    </div>
+                    {expandedSections.smartCrops ? <ChevronUp className="w-4 h-4 text-dark-400" /> : <ChevronDown className="w-4 h-4 text-dark-400" />}
+                  </button>
+                  {expandedSections.smartCrops && (
+                    <div className="px-3 pb-3 space-y-2">
+                      {data.smartCropsResult.values.map((crop, index) => (
+                        <div key={index} className="p-2 bg-dark-700/50 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="text-orange-400 font-medium">Crop {index + 1}</span>
+                            <span className="text-xs text-dark-400">
+                              Aspect Ratio: {crop.aspectRatio.toFixed(2)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-dark-500 mt-1">
+                            Position: ({crop.boundingBox.x}, {crop.boundingBox.y}) | 
+                            Size: {crop.boundingBox.w}×{crop.boundingBox.h}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* No results message */}
-              {!data.captionResult && !data.tagsResult && !data.objectsResult && !data.readResult && (
+              {!data.captionResult && !data.denseCaptionsResult && !data.tagsResult && !data.objectsResult && !data.readResult && !data.peopleResult && !data.smartCropsResult && (
                 <div className="text-center py-8">
                   <Eye className="w-12 h-12 text-dark-500 mx-auto mb-3" />
                   <p className="text-dark-400">No analysis results available</p>
