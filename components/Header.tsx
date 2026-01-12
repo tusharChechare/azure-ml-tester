@@ -16,8 +16,8 @@ export default function Header() {
               <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-dark-900" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-white">ML API Tester</h1>
-              <p className="text-xs text-dark-400">Azure Machine Learning</p>
+              <h1 className="text-lg font-semibold text-white">Azure AI Tester</h1>
+              <p className="text-xs text-dark-400">ML Studio + Vision API</p>
             </div>
           </div>
 

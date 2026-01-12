@@ -3,8 +3,81 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { endpoint, apiKey, keyHeaderName, requestBody } = body;
+    const { 
+      endpoint, 
+      apiKey, 
+      keyHeaderName, 
+      requestBody,
+      // Vision API specific
+      serviceType,
+      visionEndpoint,
+      visionFeatures,
+      imageUrl,
+      imageBase64,
+    } = body;
 
+    // Handle Vision API requests
+    if (serviceType === 'vision') {
+      if (!visionEndpoint || !apiKey) {
+        return NextResponse.json(
+          { error: 'Missing Vision endpoint or API key' },
+          { status: 400 }
+        );
+      }
+
+      // Build the Vision API URL with features
+      const features = visionFeatures || ['caption', 'tags'];
+      const apiUrl = `${visionEndpoint}/computervision/imageanalysis:analyze?api-version=2024-02-01&features=${features.join(',')}`;
+
+      let visionResponse;
+
+      if (imageUrl) {
+        // Send image URL
+        visionResponse = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Ocp-Apim-Subscription-Key': apiKey,
+          },
+          body: JSON.stringify({ url: imageUrl }),
+        });
+      } else if (imageBase64) {
+        // Send base64 image as binary
+        // Remove data URL prefix if present
+        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+        const binaryData = Buffer.from(base64Data, 'base64');
+
+        visionResponse = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            'Ocp-Apim-Subscription-Key': apiKey,
+          },
+          body: binaryData,
+        });
+      } else {
+        return NextResponse.json(
+          { error: 'No image provided. Please upload an image or provide a URL.' },
+          { status: 400 }
+        );
+      }
+
+      const visionData = await visionResponse.json();
+
+      if (!visionResponse.ok) {
+        return NextResponse.json(
+          { error: visionData.error?.message || 'Vision API request failed', details: visionData },
+          { status: visionResponse.status }
+        );
+      }
+
+      return NextResponse.json({
+        data: visionData,
+        status: visionResponse.status,
+      });
+    }
+
+    // Handle ML Studio requests (existing functionality)
     if (!endpoint || !apiKey) {
       return NextResponse.json(
         { error: 'Missing endpoint or API key' },
@@ -38,7 +111,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
-

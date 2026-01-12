@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Image as ImageIcon, Upload, X, Link as LinkIcon, Eye, EyeOff } from 'lucide-react';
+import { Image as ImageIcon, Upload, X, Link as LinkIcon, Eye, EyeOff, Globe, CheckCircle } from 'lucide-react';
 import { fileToBase64, getImageRequestTemplate } from '@/lib/utils';
 
 interface ImageUploaderProps {
-  onImageSelect: (base64: string, requestBody: string) => void;
+  onImageSelect: (base64OrUrl: string, requestBody: string, isUrl?: boolean) => void;
 }
 
 export default function ImageUploader({ onImageSelect }: ImageUploaderProps) {
@@ -16,6 +16,8 @@ export default function ImageUploader({ onImageSelect }: ImageUploaderProps) {
   const [urlInput, setUrlInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUrlMode, setIsUrlMode] = useState(false);
+  const [loadedUrl, setLoadedUrl] = useState<string>('');
 
   const processFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -25,12 +27,14 @@ export default function ImageUploader({ onImageSelect }: ImageUploaderProps) {
 
     setLoading(true);
     setError(null);
+    setIsUrlMode(false);
+    setLoadedUrl('');
 
     try {
       const base64 = await fileToBase64(file);
       setPreview(base64);
       setBase64Data(base64);
-      onImageSelect(base64, getImageRequestTemplate(base64));
+      onImageSelect(base64, getImageRequestTemplate(base64), false);
     } catch (err) {
       setError('Failed to process image');
       console.error(err);
@@ -64,22 +68,25 @@ export default function ImageUploader({ onImageSelect }: ImageUploaderProps) {
   const handleUrlLoad = async () => {
     if (!urlInput) return;
 
+    // Validate URL format
+    try {
+      new URL(urlInput);
+    } catch {
+      setError('Please enter a valid URL');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
-    try {
-      const response = await fetch(urlInput);
-      const blob = await response.blob();
-      const base64 = await fileToBase64(new File([blob], 'image'));
-      setPreview(base64);
-      setBase64Data(base64);
-      onImageSelect(base64, getImageRequestTemplate(base64));
-    } catch (err) {
-      setError('Failed to load image from URL');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    // For Vision API, we can send the URL directly - no need to fetch!
+    // Set the URL as the preview source (the image tag will handle CORS for display)
+    setIsUrlMode(true);
+    setLoadedUrl(urlInput);
+    setPreview(urlInput); // Use URL directly as preview source
+    setBase64Data(''); // Clear base64 data since we're using URL mode
+    onImageSelect(urlInput, JSON.stringify({ url: urlInput }, null, 2), true);
+    setLoading(false);
   };
 
   const clearImage = () => {
@@ -87,6 +94,8 @@ export default function ImageUploader({ onImageSelect }: ImageUploaderProps) {
     setBase64Data('');
     setUrlInput('');
     setError(null);
+    setIsUrlMode(false);
+    setLoadedUrl('');
   };
 
   const handlePaste = async (e: React.ClipboardEvent) => {
@@ -193,35 +202,77 @@ export default function ImageUploader({ onImageSelect }: ImageUploaderProps) {
                   src={preview}
                   alt="Preview"
                   className="max-w-full max-h-[250px] object-contain"
+                  onError={(e) => {
+                    // If image fails to load (CORS), show placeholder
+                    if (isUrlMode) {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }
+                  }}
                 />
+                {/* URL mode fallback display */}
+                {isUrlMode && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-dark-800/90 p-4">
+                    <Globe className="w-12 h-12 text-green-400 mb-3" />
+                    <CheckCircle className="w-6 h-6 text-green-400 mb-2" />
+                    <p className="text-white font-medium text-center mb-1">Image URL Ready</p>
+                    <p className="text-xs text-dark-400 text-center break-all max-w-full px-4">
+                      {loadedUrl.length > 60 ? loadedUrl.substring(0, 60) + '...' : loadedUrl}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Image info */}
               <div className="mt-3 p-3 bg-dark-800 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-dark-400">Base64 Encoded</span>
-                  <button
-                    onClick={() => setShowBase64(!showBase64)}
-                    className="flex items-center gap-1.5 text-xs text-azure-400 hover:text-azure-300"
-                  >
-                    {showBase64 ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                    {showBase64 ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                {showBase64 && (
-                  <div className="p-2 bg-dark-900 rounded border border-dark-700 text-xs text-dark-400 font-mono break-all max-h-24 overflow-y-auto">
-                    {base64Data}
-                  </div>
+                {isUrlMode ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Globe className="w-4 h-4 text-green-400" />
+                      <span className="text-sm text-green-400 font-medium">URL Mode</span>
+                    </div>
+                    <div className="p-2 bg-dark-900 rounded border border-dark-700 text-xs text-dark-400 font-mono break-all">
+                      {loadedUrl}
+                    </div>
+                    <div className="mt-2 text-xs text-dark-500">
+                      The URL will be sent directly to the API
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-dark-400">Base64 Encoded</span>
+                      <button
+                        onClick={() => setShowBase64(!showBase64)}
+                        className="flex items-center gap-1.5 text-xs text-azure-400 hover:text-azure-300"
+                      >
+                        {showBase64 ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        {showBase64 ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
+                    {showBase64 && (
+                      <div className="p-2 bg-dark-900 rounded border border-dark-700 text-xs text-dark-400 font-mono break-all max-h-24 overflow-y-auto">
+                        {base64Data}
+                      </div>
+                    )}
+                    <div className="mt-2 text-xs text-dark-500">
+                      Size: {Math.round(base64Data.length / 1024)} KB (base64)
+                    </div>
+                  </>
                 )}
-                <div className="mt-2 text-xs text-dark-500">
-                  Size: {Math.round(base64Data.length / 1024)} KB (base64)
-                </div>
               </div>
 
               {/* Educational note */}
               <div className="mt-3 p-3 bg-azure-500/10 border border-azure-500/30 rounded-lg">
                 <p className="text-xs text-azure-300">
-                  <strong>💡 Learning Note:</strong> The image is converted to Base64 format before being sent to the ML endpoint. This is how binary data (images) are transmitted in JSON requests.
+                  {isUrlMode ? (
+                    <>
+                      <strong>💡 Learning Note:</strong> When using a URL, the Azure Vision API fetches the image directly from that URL. This is useful for publicly accessible images and avoids file size limits.
+                    </>
+                  ) : (
+                    <>
+                      <strong>💡 Learning Note:</strong> The image is converted to Base64 format before being sent to the ML endpoint. This is how binary data (images) are transmitted in JSON requests.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
