@@ -57,6 +57,8 @@ export default function Home() {
     smartCrops: false,
   });
 
+  const [smartCropRatios, setSmartCropRatios] = useState<number[]>([1.0]);
+
   // Request/Response state
   const [inputMode, setInputMode] = useState<InputMode>('visual');
   const [requestBody, setRequestBody] = useState(getDefaultRequestTemplate());
@@ -245,6 +247,7 @@ export default function Home() {
         visionEndpoint: visionConfig.endpoint,
         apiKey: visionConfig.apiKey,
         visionFeatures: enabledFeatures,
+        smartCropRatios: enabledFeatures.includes('smartCrops') ? smartCropRatios : undefined,
       };
 
       if (imageIsUrl) {
@@ -451,7 +454,12 @@ export default function Home() {
 
                 <VisionTemplates onSelectTemplate={setVisionFeatures} />
 
-                <VisionFeatureSelector features={visionFeatures} onChange={setVisionFeatures} />
+                <VisionFeatureSelector 
+                  features={visionFeatures} 
+                  onChange={setVisionFeatures}
+                  smartCropRatios={smartCropRatios}
+                  onSmartCropRatiosChange={setSmartCropRatios}
+                />
 
                 {/* Image Upload for Vision */}
                 <div className="min-h-[300px]">

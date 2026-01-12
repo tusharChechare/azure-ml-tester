@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
       serviceType,
       visionEndpoint,
       visionFeatures,
+      smartCropRatios,
       imageUrl,
       imageBase64,
     } = body;
@@ -27,7 +28,12 @@ export async function POST(request: NextRequest) {
 
       // Build the Vision API URL with features
       const features = visionFeatures || ['caption', 'tags'];
-      const apiUrl = `${visionEndpoint}/computervision/imageanalysis:analyze?api-version=2024-02-01&features=${features.join(',')}`;
+      let apiUrl = `${visionEndpoint}/computervision/imageanalysis:analyze?api-version=2024-02-01&features=${features.join(',')}`;
+      
+      // Add smart crop aspect ratios if smartCrops feature is enabled
+      if (features.includes('smartCrops') && smartCropRatios && smartCropRatios.length > 0) {
+        apiUrl += `&smartCrops-aspect-ratios=${smartCropRatios.join(',')}`;
+      }
 
       let visionResponse;
 
